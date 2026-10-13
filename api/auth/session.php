@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '../_init.php';
+require_once __DIR__ . '/../_init.php';
 
 use Luntian\FirebaseAuth;
 use Luntian\Response;
