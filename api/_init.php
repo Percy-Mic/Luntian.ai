@@ -10,7 +10,8 @@ $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($requestMethod === 'OPTIONS') {
     header('Access-Control-Allow-Origin: ' . cors_origin());
-    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Vary: Origin');
+    header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Admin-Secret');
     header('Access-Control-Max-Age: 86400');
     http_response_code(204);
@@ -18,20 +19,46 @@ if ($requestMethod === 'OPTIONS') {
 }
 
 header('Access-Control-Allow-Origin: ' . cors_origin());
+header('Vary: Origin');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Admin-Secret');
 
 function cors_origin(): string
 {
-    $allowed = env('APP_URL', 'http://localhost/luntianAi');
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    if ($origin !== '' && str_starts_with($origin, parse_url($allowed, PHP_URL_SCHEME) . '://' . parse_url($allowed, PHP_URL_HOST))) {
+    $configured = env('APP_URL', 'http://localhost/luntianAi');
+    $configuredOrigin = parse_url($configured, PHP_URL_SCHEME) . '://' . parse_url($configured, PHP_URL_HOST);
+    $configuredPort = parse_url($configured, PHP_URL_PORT);
+    if ($configuredPort !== null) {
+        $configuredOrigin .= ':' . $configuredPort;
+    }
+
+    $origin = trim((string) ($_SERVER['HTTP_ORIGIN'] ?? ''));
+    if ($origin === '') {
+        return $configuredOrigin;
+    }
+
+    $parts = parse_url($origin);
+    if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+        return $configuredOrigin;
+    }
+    $normalizedOrigin = strtolower($parts['scheme'] . '://' . $parts['host']);
+    if (isset($parts['port'])) {
+        $normalizedOrigin .= ':' . $parts['port'];
+    }
+
+    if (hash_equals(strtolower($configuredOrigin), $normalizedOrigin)) {
         return $origin;
     }
-    if ($origin !== '' && env('APP_ENV') === 'local') {
+
+    if (env('APP_ENV') === 'local' && in_array($normalizedOrigin, [
+        'http://localhost',
+        'http://127.0.0.1',
+    ], true)) {
         return $origin;
     }
-    return $allowed;
+
+    // Return the configured origin for unknown origins; never reflect arbitrary origins.
+    return $configuredOrigin;
 }
 
 function read_json_body(): array
@@ -53,8 +80,7 @@ function require_auth_user(): array
     if ($firebase === null) {
         Response::error('Sign in required', 401);
     }
-    $user = \Luntian\UserRepository::upsertFromFirebase($firebase);
-    return $user;
+    return \Luntian\UserRepository::upsertFromFirebase($firebase);
 }
 
 function require_admin(): void
