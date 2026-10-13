@@ -46,6 +46,7 @@
     if (!message || sending) return;
     sending = true;
     sendBtn.disabled = true;
+    sendBtn.setAttribute('aria-busy', 'true');
     appendMessage('user', message);
     input.value = '';
     input.style.height = 'auto';
@@ -65,10 +66,18 @@
       appendMessage('assistant', data.reply);
     } catch (err) {
       thinking.remove();
-      appendMessage('assistant', 'Error: ' + (err.message || 'Could not send message. Check server configuration.'));
+      // Keep the user's message available to retry after a temporary failure.
+      if (!input.value.trim()) {
+        input.value = message;
+        input.focus();
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 240) + 'px';
+      }
+      appendMessage('assistant', 'I couldn’t send that message. ' + (err.message || 'Please check your connection and try again.'));
     } finally {
       sending = false;
       sendBtn.disabled = false;
+      sendBtn.removeAttribute('aria-busy');
     }
   }
 
