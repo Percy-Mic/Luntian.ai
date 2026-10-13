@@ -49,9 +49,13 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submit failed');
       if (statusEl) {
-        statusEl.className = 'text-sm text-secondary font-medium';
+        statusEl.className = 'text-sm text-emerald-300 font-medium';
         statusEl.textContent = data.message;
       }
+      const currentStatus = document.querySelector('#payment-details p:last-child span');
+      if (currentStatus) currentStatus.textContent = data.status || 'submitted';
+      const proofInput = form.querySelector('input[type=file][name=proof]');
+      if (proofInput) proofInput.disabled = true;
       form.querySelector('button[type=submit]').disabled = true;
     } catch (err) {
       if (statusEl) {
