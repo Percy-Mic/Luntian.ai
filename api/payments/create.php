@@ -38,7 +38,7 @@ $pdo = Database::connection();
 $pdo->beginTransaction();
 try {
     // Serialize order creation per user and billing cycle, including when no row exists yet.
-    $cycleLock = $cycle === 'yearly' ? 2 : 1;
+    $cycleLock = 0;
     $lock = $pdo->prepare('SELECT pg_advisory_xact_lock(:uid, :cycle)');
     $lock->execute(['uid' => (int) $user['id'], 'cycle' => $cycleLock]);
 
@@ -46,12 +46,12 @@ try {
     $existing = $pdo->prepare(
         "SELECT id, reference_code, amount_php, billing_cycle, status, created_at
          FROM payments
-         WHERE user_id = :uid AND billing_cycle = :cycle AND status IN ('pending', 'submitted')
+         WHERE user_id = :uid AND status IN ('pending', 'submitted')
          ORDER BY created_at DESC
          LIMIT 1
          FOR UPDATE"
     );
-    $existing->execute(['uid' => (int) $user['id'], 'cycle' => $cycle]);
+    $existing->execute(['uid' => (int) $user['id']]);
     $payment = $existing->fetch();
 
     if (!$payment) {
