@@ -9,8 +9,8 @@ use Luntian\Response;
 Response::json([
     'ok' => true,
     'gcash' => [
-        'accountName' => env('GCASH_ACCOUNT_NAME', 'Michael Alcala Nono'),
-        'mobile' => env('GCASH_MOBILE', '09458966725'),
+        'accountName' => env('GCASH_ACCOUNT_NAME', ''),
+        'mobile' => env('GCASH_MOBILE', ''),
         'qrImageUrl' => app_url() . '/public/assets/images/gcash-qr.png',
         'monthlyPhp' => (float) (env('GCASH_PRO_MONTHLY_PHP', '1499') ?? '1499'),
         'yearlyPhp' => (float) (env('GCASH_PRO_YEARLY_PHP', '14390') ?? '14390'),

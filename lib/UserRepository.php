@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Luntian;
 
-use PDO;
-
 final class UserRepository
 {
     /** @param array{uid: string, email: ?string, name: ?string, picture: ?string, provider: string} $firebaseUser */
@@ -47,13 +45,23 @@ final class UserRepository
 
     public static function activatePro(int $userId, string $billingCycle): void
     {
-        $pdo = Database::connection();
-        if ($billingCycle === 'yearly') {
-            $sql = "UPDATE users SET plan = 'pro', plan_expires_at = NOW() + INTERVAL '1 year', updated_at = NOW() WHERE id = :id";
-        } else {
-            $sql = "UPDATE users SET plan = 'pro', plan_expires_at = NOW() + INTERVAL '1 month', updated_at = NOW() WHERE id = :id";
+        if (!in_array($billingCycle, ['monthly', 'yearly'], true)) {
+            throw new \InvalidArgumentException('Unsupported billing cycle.');
         }
-        $pdo->prepare($sql)->execute(['id' => $userId]);
+
+        // Renewal adds time to the later of now or the current expiry, so approving
+        // a renewal early does not discard unused subscription time.
+        $interval = $billingCycle === 'yearly' ? "1 year" : "1 month";
+        $sql = "UPDATE users
+                SET plan = 'pro',
+                    plan_expires_at = GREATEST(COALESCE(plan_expires_at, NOW()), NOW()) + INTERVAL '{$interval}',
+                    updated_at = NOW()
+                WHERE id = :id";
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute(['id' => $userId]);
+        if ($stmt->rowCount() !== 1) {
+            throw new \RuntimeException('Subscription user could not be updated.');
+        }
     }
 
     public static function isPro(?array $user): bool
@@ -64,6 +72,7 @@ final class UserRepository
         if (empty($user['plan_expires_at'])) {
             return true;
         }
-        return strtotime((string) $user['plan_expires_at']) > time();
+        $expiresAt = strtotime((string) $user['plan_expires_at']);
+        return $expiresAt !== false && $expiresAt > time();
     }
 }

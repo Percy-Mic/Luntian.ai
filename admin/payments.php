@@ -1,112 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<meta name="luntian-api-base" content=""/>
-<title>Admin — GCash payments</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><title>Luntian AI — Payment operations</title><script src="https://cdn.tailwindcss.com"></script><style>
+:root{font-family:Inter,ui-sans-serif,system-ui,sans-serif}body{background:radial-gradient(ellipse at top left,rgba(16,185,129,.11),transparent 32%),#080d12}.panel{background:rgba(17,24,32,.86);border:1px solid rgba(148,163,184,.15);box-shadow:0 20px 60px rgba(0,0,0,.14)}.muted{color:#91a0b3}.field{background:#0b1118;border:1px solid #293544;color:#f8fafc;outline:none}.field:focus{border-color:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.12)}.btn{transition:transform .15s ease,opacity .15s ease}.btn:active{transform:scale(.98)}.btn:disabled{opacity:.45;cursor:not-allowed}
+</style></head><body class="min-h-screen text-slate-100">
+<header class="border-b border-white/10 bg-slate-950/70 backdrop-blur-xl"><div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8"><div class="flex items-center gap-3"><div class="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-300/25"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21c5-3 8-7 8-12-5 0-9 2-11 6"/><path d="M4 11c0 5 3 8 8 10"/><path d="M3 4c6 0 10 3 11 8"/></svg></div><div><p class="font-semibold tracking-tight">Luntian <span class="text-emerald-300">AI</span></p><p class="text-xs muted">Payment operations</p></div></div><div class="flex items-center gap-2 text-xs muted"><span class="h-2 w-2 rounded-full bg-emerald-400"></span> Manual GCash review</div></div></header>
+<main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+<section class="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><p class="mb-2 text-xs font-semibold uppercase tracking-[.2em] text-emerald-300">Administration</p><h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Payment review</h1><p class="mt-2 max-w-2xl text-sm leading-6 muted">Review submitted GCash payments, inspect proof securely, and activate subscriptions only after manual verification.</p></div><div class="flex gap-2"><button id="refresh-btn" class="btn rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium hover:bg-white/10">↻ Refresh</button><button id="signout-btn" class="btn rounded-xl border border-white/10 px-4 py-2.5 text-sm muted hover:bg-white/5">Clear session</button></div></section>
+<section class="panel mb-6 rounded-2xl p-4 sm:p-5"><div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end"><div><label for="admin-secret" class="mb-2 block text-sm font-medium">Admin secret</label><input id="admin-secret" type="password" autocomplete="current-password" class="field w-full rounded-xl px-4 py-3 text-sm" placeholder="Enter ADMIN_SECRET from server environment"><p class="mt-2 text-xs muted">Kept in this browser session only. Never enter this into public/client-side code.</p></div><div><label for="status-filter" class="mb-2 block text-sm font-medium">Payment status</label><select id="status-filter" class="field w-full rounded-xl px-4 py-3 text-sm"><option value="submitted">Awaiting review</option><option value="pending">Pending proof</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="cancelled">Cancelled</option></select></div><button id="load-btn" class="btn rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300">Load payments</button></div></section>
+<section class="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 id="list-title" class="text-lg font-semibold">Awaiting review</h2><p id="list-subtitle" class="mt-1 text-sm muted">Payment records from your database.</p></div><span id="result-count" class="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs muted">Not loaded</span></section>
+<div id="notice" role="status" aria-live="polite" class="mb-4 hidden rounded-xl border px-4 py-3 text-sm"></div><section id="list" class="grid gap-4 lg:grid-cols-2"><div class="panel rounded-2xl p-8 text-center text-sm muted lg:col-span-2">Enter the admin secret and load the payment queue.</div></section><p class="mt-8 text-center text-xs muted">Luntian AI · Private operations console · Verify payment receipts before approving.</p></main>
+<div id="proof-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label="Payment proof viewer"><div class="panel w-full max-w-4xl overflow-hidden rounded-2xl"><div class="flex items-center justify-between border-b border-white/10 px-4 py-3"><div><p class="font-semibold">Payment proof</p><p id="proof-caption" class="mt-1 text-xs muted"></p></div><button id="close-proof" class="rounded-lg px-3 py-2 text-sm hover:bg-white/10" aria-label="Close proof viewer">Close ✕</button></div><div class="grid min-h-48 place-items-center bg-black/30 p-4"><img id="proof-image" alt="Submitted GCash payment proof" class="hidden max-h-[72vh] max-w-full rounded-lg object-contain"><p id="proof-error" class="hidden text-sm text-rose-300"></p></div></div></div>
 <script>
-  document.querySelector('meta[name="luntian-api-base"]').content =
-    window.location.origin + window.location.pathname.replace(/\/admin\/[^/]*$/, '').replace(/\/admin$/, '') ||
-    window.location.origin + window.location.pathname.replace(/\/admin\/.*$/, '');
-  const base = document.querySelector('meta[name="luntian-api-base"]').content;
-  if (!base.endsWith('luntianAi') && base.includes('/admin')) {
-    document.querySelector('meta[name="luntian-api-base"]').content =
-      window.location.origin + '/luntianAi';
-  }
-</script>
-</head>
-<body class="bg-slate-900 text-white min-h-screen p-6 font-sans">
-<div class="max-w-4xl mx-auto">
-<h1 class="text-2xl font-bold mb-2">GCash payment approvals</h1>
-<p class="text-slate-400 text-sm mb-6">Free manual process — no GCash API. Enter your <code>ADMIN_SECRET</code> from .env (stored only in this browser session).</p>
-
-<div class="flex gap-2 mb-6">
-<input type="password" id="admin-secret" class="flex-1 rounded-lg bg-slate-800 border border-slate-600 px-4 py-2" placeholder="ADMIN_SECRET"/>
-<button id="load-btn" class="px-4 py-2 bg-violet-600 rounded-lg font-medium">Load pending</button>
-</div>
-
-<div id="list" class="space-y-4"></div>
-</div>
-<script>
-(function () {
-  const meta = document.querySelector('meta[name="luntian-api-base"]');
-  let apiBase = meta.content;
-  if (!apiBase) {
-    apiBase = window.location.origin + window.location.pathname.replace(/\/admin\/.*$/, '');
-    meta.content = apiBase;
-  }
-
-  function secret() {
-    let s = sessionStorage.getItem('luntian_admin_secret');
-    const input = document.getElementById('admin-secret').value.trim();
-    if (input) {
-      s = input;
-      sessionStorage.setItem('luntian_admin_secret', s);
-    }
-    return s;
-  }
-
-  async function adminFetch(path, options = {}) {
-    const headers = Object.assign(
-      { 'X-Admin-Secret': secret(), 'Content-Type': 'application/json' },
-      options.headers || {}
-    );
-    const res = await fetch(apiBase + path, Object.assign({}, options, { headers }));
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed');
-    return data;
-  }
-
-  async function load() {
-    const list = document.getElementById('list');
-    list.innerHTML = '<p class="text-slate-400">Loading…</p>';
-    try {
-      const data = await adminFetch('/api/admin/payments.php?status=submitted');
-      if (!data.payments.length) {
-        list.innerHTML = '<p class="text-slate-400">No submitted payments waiting.</p>';
-        return;
-      }
-      list.innerHTML = data.payments.map((p) => `
-        <div class="border border-slate-700 rounded-xl p-4 bg-slate-800/50">
-          <p class="font-bold">${p.reference_code} — ₱${Number(p.amount_php).toLocaleString()} (${p.billing_cycle})</p>
-          <p class="text-sm text-slate-400">${p.display_name || ''} &lt;${p.email || ''}&gt;</p>
-          <p class="text-sm">GCash ref: <strong>${p.gcash_reference || '—'}</strong></p>
-          ${p.proof_path ? `<a class="text-violet-400 text-sm" href="../${p.proof_path}" target="_blank">View screenshot</a>` : ''}
-          <div class="flex gap-2 mt-3">
-            <button data-approve="${p.id}" class="px-3 py-1.5 bg-green-600 rounded-lg text-sm">Approve</button>
-            <button data-reject="${p.id}" class="px-3 py-1.5 bg-red-600/80 rounded-lg text-sm">Reject</button>
-          </div>
-        </div>
-      `).join('');
-
-      list.querySelectorAll('[data-approve]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          await adminFetch('/api/admin/payments.php', {
-            method: 'POST',
-            body: JSON.stringify({ paymentId: +btn.dataset.approve, action: 'approve' }),
-          });
-          load();
-        });
-      });
-      list.querySelectorAll('[data-reject]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          const note = prompt('Rejection note (optional):') || '';
-          await adminFetch('/api/admin/payments.php', {
-            method: 'POST',
-            body: JSON.stringify({ paymentId: +btn.dataset.reject, action: 'reject', adminNote: note }),
-          });
-          load();
-        });
-      });
-    } catch (e) {
-      list.innerHTML = '<p class="text-red-400">' + e.message + '</p>';
-    }
-  }
-
-  document.getElementById('load-btn').addEventListener('click', load);
+(function(){
+const apiBase=location.origin+location.pathname.replace(/\/admin(?:\/.*)?$/,'');const $=id=>document.getElementById(id);const list=$('list');const secretInput=$('admin-secret');const filter=$('status-filter');const titles={submitted:'Awaiting review',pending:'Pending proof',approved:'Approved payments',rejected:'Rejected payments',cancelled:'Cancelled payments'};let proofUrl=null,busy=false;
+const saved=sessionStorage.getItem('luntian_admin_secret');if(saved)secretInput.value=saved;
+function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined&&text!==null)n.textContent=String(text);return n}
+function button(label,cls,fn){const n=el('button','btn rounded-xl px-4 py-2.5 text-sm font-semibold '+cls,label);n.type='button';n.addEventListener('click',fn);return n}
+function notice(msg,type){const n=$('notice');n.textContent=msg;n.className='mb-4 rounded-xl border px-4 py-3 text-sm '+(type==='error'?'border-rose-400/30 bg-rose-400/10 text-rose-200':'border-emerald-400/30 bg-emerald-400/10 text-emerald-200')}
+function clearNotice(){$('notice').classList.add('hidden')}
+function money(v){const n=Number(v);return Number.isFinite(n)?new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP'}).format(n):'—'}
+function date(v){if(!v)return'—';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString()}
+function busyState(v){busy=v;$('load-btn').disabled=v;$('refresh-btn').disabled=v;$('load-btn').textContent=v?'Loading…':'Load payments'}
+async function request(path,options){const secret=secretInput.value.trim();if(!secret)throw Error('Enter the admin secret first.');sessionStorage.setItem('luntian_admin_secret',secret);const res=await fetch(apiBase+path,Object.assign({},options||{},{headers:Object.assign({'X-Admin-Secret':secret,'Content-Type':'application/json'},options&&options.headers||{})}));const data=await res.json().catch(()=>({error:'The server returned an invalid response.'}));if(!res.ok)throw Error(data.error||'Request failed ('+res.status+').');return data}
+function field(label,value){const w=el('div','min-w-0');w.append(el('p','text-xs muted',label),el('p','mt-1 break-words text-sm font-medium',value||'—'));return w}
+function pill(status){const styles={submitted:'border-amber-300/20 bg-amber-300/10 text-amber-200',pending:'border-slate-300/20 bg-slate-300/10 text-slate-200',approved:'border-emerald-300/20 bg-emerald-300/10 text-emerald-200',rejected:'border-rose-300/20 bg-rose-300/10 text-rose-200',cancelled:'border-slate-300/20 bg-slate-300/10 text-slate-300'};return el('span','inline-flex rounded-full border px-2.5 py-1 text-xs font-medium '+(styles[status]||styles.pending),status)}
+async function viewProof(p){$('proof-caption').textContent=p.reference_code+' · '+(p.display_name||p.email||'Customer');$('proof-error').classList.add('hidden');$('proof-image').classList.add('hidden');$('proof-modal').classList.remove('hidden');$('proof-modal').classList.add('flex');try{const res=await fetch(apiBase+'/api/admin/payment-proof.php?id='+encodeURIComponent(p.id),{headers:{'X-Admin-Secret':secretInput.value.trim()}});if(!res.ok)throw Error(res.status===404?'Proof image is unavailable.':'Could not load the proof image.');const blob=await res.blob();if(proofUrl)URL.revokeObjectURL(proofUrl);proofUrl=URL.createObjectURL(blob);$('proof-image').src=proofUrl;$('proof-image').classList.remove('hidden')}catch(e){$('proof-error').textContent=e.message;$('proof-error').classList.remove('hidden')}}
+function closeProof(){$('proof-modal').classList.add('hidden');$('proof-modal').classList.remove('flex');$('proof-image').removeAttribute('src');if(proofUrl){URL.revokeObjectURL(proofUrl);proofUrl=null}}
+async function review(p,action,card,note){const buttons=card.querySelectorAll('button');buttons.forEach(b=>b.disabled=true);try{await request('/api/admin/payments.php',{method:'POST',body:JSON.stringify({paymentId:Number(p.id),action,adminNote:note||''})});notice(action==='approve'?'Payment approved and Pro access updated.':'Payment rejected.','success');await load()}catch(e){notice(e.message,'error');buttons.forEach(b=>b.disabled=false)}}
+function render(p){const card=el('article','panel rounded-2xl p-5 sm:p-6');const top=el('div','flex items-start justify-between gap-3');const ref=el('div','min-w-0');ref.append(el('p','break-all text-xs font-semibold tracking-wide text-emerald-300',p.reference_code),el('h3','mt-2 text-lg font-semibold',p.display_name||'Customer'));if(p.email)ref.append(el('p','mt-1 break-all text-sm muted',p.email));top.append(ref,pill(p.status));card.append(top);
+const amount=el('div','mt-5 rounded-xl border border-white/10 bg-black/20 p-4');amount.append(el('p','text-xs muted','Order total'),el('p','mt-1 text-2xl font-semibold tracking-tight',money(p.amount_php)),el('p','mt-1 text-xs muted',(p.billing_cycle||'').toUpperCase()+' plan'));card.append(amount);
+const details=el('div','mt-5 grid grid-cols-2 gap-x-4 gap-y-4');details.append(field('GCash reference',p.gcash_reference),field('Order created',date(p.created_at)),field('Last updated',date(p.updated_at)),field('Approved at',date(p.approved_at)));card.append(details);if(p.admin_note)card.append(el('p','mt-4 rounded-lg bg-rose-400/10 p-3 text-sm text-rose-200','Review note: '+p.admin_note));
+const actions=el('div','mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4');if(p.proof_path)actions.append(button('View proof','border border-white/10 bg-white/5 hover:bg-white/10',()=>viewProof(p)));else actions.append(el('span','self-center text-xs muted','No proof uploaded yet'));
+if(p.status==='submitted'){actions.append(button('Approve payment','bg-emerald-400 text-slate-950 hover:bg-emerald-300',()=>{if(confirm('Confirm you have verified the GCash transaction for '+p.reference_code+'?'))review(p,'approve',card,'')}));actions.append(button('Reject','border border-rose-300/20 bg-rose-400/10 text-rose-200 hover:bg-rose-400/20',()=>{const note=prompt('Reason for rejection (optional):');if(note===null)return;if(note.length>1000){notice('Rejection note must be 1,000 characters or fewer.','error');return}review(p,'reject',card,note.trim())}))}card.append(actions);return card}
+async function load(){if(busy)return;clearNotice();busyState(true);$('list-title').textContent=titles[filter.value]||'Payments';list.replaceChildren(el('div','panel rounded-2xl p-8 text-center text-sm muted lg:col-span-2','Loading payment records…'));try{const data=await request('/api/admin/payments.php?status='+encodeURIComponent(filter.value));list.replaceChildren();const payments=Array.isArray(data.payments)?data.payments:[];$('result-count').textContent=payments.length+' record'+(payments.length===1?'':'s');$('list-subtitle').textContent='Showing the latest '+payments.length+' database record'+(payments.length===1?'':'s')+' for this status.';if(!payments.length){const empty=el('div','panel rounded-2xl p-10 text-center lg:col-span-2');empty.append(el('div','mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-emerald-400/10 text-2xl text-emerald-300','✓'),el('h3','mt-4 font-semibold','Nothing to review'),el('p','mt-2 text-sm muted','There are no payment records in this status.'));list.append(empty);return}payments.forEach(p=>list.append(render(p)))}catch(e){list.replaceChildren(el('div','panel rounded-2xl p-8 text-center text-sm text-rose-200 lg:col-span-2',e.message));$('result-count').textContent='Unavailable'}finally{busyState(false)}}
+$('load-btn').addEventListener('click',load);$('refresh-btn').addEventListener('click',load);filter.addEventListener('change',load);$('signout-btn').addEventListener('click',()=>{sessionStorage.removeItem('luntian_admin_secret');secretInput.value='';list.replaceChildren(el('div','panel rounded-2xl p-8 text-center text-sm muted lg:col-span-2','Enter the admin secret and load the payment queue.'));$('result-count').textContent='Not loaded';clearNotice()});$('close-proof').addEventListener('click',closeProof);$('proof-modal').addEventListener('click',e=>{if(e.target===$('proof-modal'))closeProof()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeProof()});
 })();
-</script>
-</body>
-</html>
+</script></body></html>
