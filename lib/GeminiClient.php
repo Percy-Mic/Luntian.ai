@@ -6,7 +6,13 @@ namespace Luntian;
 
 final class GeminiClient
 {
-    public static function chat(string $message, ?string $systemPrompt = null): string
+    /**
+     * Generate a reply using recent persisted conversation turns.
+     * History is intentionally bounded by the caller to control latency and token use.
+     *
+     * @param array<int, array{role:string,content:string}> $history
+     */
+    public static function chat(string $message, ?string $systemPrompt = null, array $history = []): string
     {
         $apiKey = env('GEMINI_API_KEY');
         if ($apiKey === null || $apiKey === '') {
@@ -19,14 +25,15 @@ final class GeminiClient
             . ':generateContent?key=' . rawurlencode($apiKey);
 
         $contents = [];
-        if ($systemPrompt !== null && $systemPrompt !== '') {
+        foreach ($history as $turn) {
+            $role = ($turn['role'] ?? '') === 'assistant' ? 'model' : 'user';
+            $content = trim((string) ($turn['content'] ?? ''));
+            if ($content === '') {
+                continue;
+            }
             $contents[] = [
-                'role' => 'user',
-                'parts' => [['text' => "System instructions:\n" . $systemPrompt]],
-            ];
-            $contents[] = [
-                'role' => 'model',
-                'parts' => [['text' => 'Understood. I will follow those instructions.']],
+                'role' => $role,
+                'parts' => [['text' => $content]],
             ];
         }
         $contents[] = [
@@ -34,20 +41,25 @@ final class GeminiClient
             'parts' => [['text' => $message]],
         ];
 
-        $payload = json_encode([
+        $payload = [
             'contents' => $contents,
             'generationConfig' => [
                 'temperature' => 0.7,
                 'maxOutputTokens' => 2048,
             ],
-        ], JSON_THROW_ON_ERROR);
+        ];
+        if ($systemPrompt !== null && $systemPrompt !== '') {
+            $payload['systemInstruction'] = ['parts' => [['text' => $systemPrompt]]];
+        }
 
+        $encoded = json_encode($payload, JSON_THROW_ON_ERROR);
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_POSTFIELDS => $encoded,
             CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_TIMEOUT => 60,
         ]);
 
@@ -57,20 +69,24 @@ final class GeminiClient
         curl_close($ch);
 
         if ($errno !== 0 || $raw === false) {
-            Response::error('Could not reach Gemini API.', 502);
+            Response::error('Could not reach Gemini API. Please try again.', 502);
         }
 
         $data = json_decode($raw, true);
         if ($status >= 400) {
-            $msg = $data['error']['message'] ?? 'Gemini request failed';
-            Response::error((string) $msg, 502);
+            $providerMessage = $data['error']['message'] ?? 'Gemini request failed';
+            error_log('Gemini API error (' . $status . '): ' . (string) $providerMessage);
+            Response::error(
+                $status === 429 ? 'AI usage is temporarily rate-limited. Please try again shortly.' : 'The AI provider could not complete this request.',
+                $status === 429 ? 429 : 502
+            );
         }
 
         $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
-        if (!is_string($text) || $text === '') {
-            Response::error('Empty response from Gemini.', 502);
+        if (!is_string($text) || trim($text) === '') {
+            Response::error('The AI returned an empty response. Please try again.', 502);
         }
 
-        return $text;
+        return trim($text);
     }
 }
