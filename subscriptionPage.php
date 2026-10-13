@@ -210,15 +210,15 @@
 <ul class="space-y-4 mb-lg flex-grow">
 <li class="flex items-center gap-3 text-on-surface-variant dark:text-outline-variant">
 <span class="material-symbols-outlined text-primary text-xl">check_circle</span>
-<span class="text-sm">Basic Chat</span>
+<span class="text-sm">AI chat access</span>
 </li>
 <li class="flex items-center gap-3 text-on-surface-variant dark:text-outline-variant">
 <span class="material-symbols-outlined text-primary text-xl">check_circle</span>
-<span class="text-sm">On call assistant</span>
+<span class="text-sm">Conversation history</span>
 </li>
 <li class="flex items-center gap-3 text-on-surface-variant dark:text-outline-variant">
 <span class="material-symbols-outlined text-primary text-xl">check_circle</span>
-<span class="text-sm">Image generation</span>
+<span class="text-sm">Available AI features</span>
 </li>
 </ul>
 <button class="w-full py-4 rounded-xl border-2 border-outline-variant text-outline font-label-md cursor-default opacity-60">
@@ -231,7 +231,7 @@
 <div class="absolute top-0 right-0">
 <div class="bg-primary text-on-primary font-label-sm py-1.5 px-8 rounded-bl-2xl shadow-lg flex items-center gap-2">
 <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
-        MOST POPULAR
+        PRO PLAN
     </div>
 </div>
 <!-- Subtle pattern background -->
@@ -244,12 +244,12 @@
 <h2 class="font-headline-lg text-headline-lg mt-4 text-on-surface dark:text-inverse-on-surface">Pro Intelligence</h2>
 <div class="flex flex-col mt-2">
 <div class="flex items-baseline">
-<span class="font-headline-xl text-headline-xl text-primary monthly-only">$29</span>
-<span class="font-headline-xl text-headline-xl text-primary yearly-only">$278</span>
+<span class="font-headline-xl text-headline-xl text-primary monthly-only">₱1,499</span>
+<span class="font-headline-xl text-headline-xl text-primary yearly-only">₱14,390</span>
 <span class="text-on-surface-variant dark:text-outline-variant ml-2 monthly-only">/mo</span>
 <span class="text-on-surface-variant dark:text-outline-variant ml-2 yearly-only">/year</span>
 </div>
-<p class="text-on-tertiary-fixed-variant text-sm font-medium yearly-only mt-1">Total $23.16/mo billed annually</p>
+<p class="text-on-tertiary-fixed-variant text-sm font-medium yearly-only mt-1">Total ₱14,390/year (about ₱1,199.17/month)</p>
 </div>
 </div>
 <div class="hidden sm:block p-5 bg-primary/10 rounded-2xl">
@@ -262,38 +262,38 @@
 <div class="space-y-4">
 <div class="flex items-center gap-3 text-on-surface dark:text-inverse-on-surface">
 <span class="material-symbols-outlined text-primary font-bold">screen_search_desktop</span>
-<span class="font-label-md">Unlimited Screen Analysis</span>
+<span class="font-label-md">Saved conversation history</span>
 </div>
 <div class="flex items-center gap-3 text-on-surface dark:text-inverse-on-surface">
 <span class="material-symbols-outlined text-primary font-bold">bolt</span>
-<span class="font-label-md">Tier-1 Processing Speed</span>
+<span class="font-label-md">Context-aware AI responses</span>
 </div>
 <div class="flex items-center gap-3 text-on-surface dark:text-inverse-on-surface">
 <span class="material-symbols-outlined text-primary font-bold">movie</span>
-<span class="font-label-md">4K Professional Video Gen</span>
+<span class="font-label-md">Subscription status tracking</span>
 </div>
 <div class="flex items-center gap-3 text-on-surface dark:text-inverse-on-surface">
 <span class="material-symbols-outlined text-primary font-bold">support_agent</span>
-<span class="font-label-md">24/7 Priority Concierge</span>
+<span class="font-label-md">Manual payment review</span>
 </div>
 </div>
 <!-- Column 2 (New Value Hooks) -->
 <div class="space-y-4">
 <div class="flex items-center gap-3 text-on-surface dark:text-inverse-on-surface">
 <span class="material-symbols-outlined text-secondary font-bold">rocket_launch</span>
-<span class="font-label-md">Early Access to v5 Engine</span>
+<span class="font-label-md">Premium features as released</span>
 </div>
 <div class="flex items-center gap-3 text-on-surface dark:text-inverse-on-surface">
 <span class="material-symbols-outlined text-secondary font-bold">verified</span>
-<span class="font-label-md">Commercial Usage License</span>
+<span class="font-label-md">Secure account-based access</span>
 </div>
 <div class="flex items-center gap-3 text-on-surface dark:text-inverse-on-surface">
 <span class="material-symbols-outlined text-secondary font-bold">api</span>
-<span class="font-label-md">Advanced API Access</span>
+<span class="font-label-md">Payment status tracking</span>
 </div>
 <div class="flex items-center gap-3 text-on-surface dark:text-inverse-on-surface">
 <span class="material-symbols-outlined text-secondary font-bold">psychology</span>
-<span class="font-label-md">Custom AI Model Training</span>
+<span class="font-label-md">Pro expiry and renewal management</span>
 </div>
 </div>
 </div>
@@ -304,8 +304,8 @@
                     </button>
                     <p class="text-center text-xs text-on-surface-variant dark:text-outline-variant">No GCash API — pay via QR, then submit proof for approval.</p>
 <!-- Card Option -->
-<button class="gcash-button flex items-center justify-center gap-3 w-full py-4 rounded-xl border border-[#007DFE]/30 bg-[#007DFE]/5 hover:bg-[#007DFE]/10 transition-all group">
-<span class="text-[#007DFE] font-label-md">Use card</span>
+<button type="button" disabled aria-disabled="true" title="Card payments are not available yet" class="gcash-button flex items-center justify-center gap-3 w-full py-4 rounded-xl border border-outline-variant/30 opacity-50 cursor-not-allowed">
+<span class="font-label-md">Card payments unavailable</span>
 </button>
 </div>
 </div>
@@ -321,21 +321,21 @@
 <span class="material-symbols-outlined text-primary">verified_user</span>
 </div>
 <h4 class="font-headline-md text-xl mb-3 text-on-surface dark:text-inverse-on-surface">Enterprise Security</h4>
-<p class="text-on-surface-variant dark:text-outline-variant">Pro members get SOC2-compliant data handling and end-to-end encryption.</p>
+<p class="text-on-surface-variant dark:text-outline-variant">Pro members get Your account and payment records are linked to your signed-in account.</p>
 </div>
 <div class="glass-card p-8 rounded-3xl border border-outline-variant/10 dark:border-outline/10">
 <div class="w-12 h-12 rounded-2xl bg-surface-container dark:bg-surface-container-highest flex items-center justify-center mb-6">
 <span class="material-symbols-outlined text-primary">cloud_sync</span>
 </div>
 <h4 class="font-headline-md text-xl mb-3 text-on-surface dark:text-inverse-on-surface">Instant Sync</h4>
-<p class="text-on-surface-variant dark:text-outline-variant">Your data stays synchronized across all devices with zero-latency cloud mirroring.</p>
+<p class="text-on-surface-variant dark:text-outline-variant">Saved conversations are stored in your account database.</p>
 </div>
 <div class="glass-card p-8 rounded-3xl border border-outline-variant/10 dark:border-outline/10">
 <div class="w-12 h-12 rounded-2xl bg-surface-container dark:bg-surface-container-highest flex items-center justify-center mb-6">
 <span class="material-symbols-outlined text-primary">architecture</span>
 </div>
 <h4 class="font-headline-md text-xl mb-3 text-on-surface dark:text-inverse-on-surface">Custom Workflows</h4>
-<p class="text-on-surface-variant dark:text-outline-variant">Automate repetitive screen tasks using our advanced logic engine.</p>
+<p class="text-on-surface-variant dark:text-outline-variant">Additional workflow tools will be introduced as they become available.</p>
 </div>
 </div>
 </section>
@@ -355,8 +355,8 @@
 <img alt="User" class="w-10 h-10 rounded-full border-2 border-surface dark:border-inverse-surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAaBMUhr8GwTkoLf84v_HEXyhcOGxmd8DGWdFrUILvhCDre1XoGRLmfkDvyPLVEfwYSwpiOXXqQQPQM9ldj5iYKwsWL-a8ejziAFO1xOOyDXsZsALWiyRw6B6mz4WohAVc2UjT30x1DRB5AYrdMPdR08XWEi-2iqxMlyj7WbDlflqekEUe8XbU40HoQ1tsfGrLuLEhI7igpyQKGawbsrYW3PgBtoSFWl4nUGPzrhIoRWnfNWVnDLyq5HU1akStTkSL6uf2y1gxaUhZ"/>
 </div>
 <div class="flex flex-col">
-<span class="font-label-md text-on-surface dark:text-inverse-on-surface">Trusted by 50,000+</span>
-<span class="text-sm text-on-surface-variant dark:text-outline-variant">Designers and Engineers</span>
+<span class="font-label-md text-on-surface dark:text-inverse-on-surface">Made for learners and builders</span>
+<span class="text-sm text-on-surface-variant dark:text-outline-variant">Students, creators, and developers</span>
 </div>
 </div>
 </div>
