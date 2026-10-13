@@ -4,98 +4,97 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/_init.php';
 
-use Luntian\AuthHelper;
 use Luntian\Database;
 use Luntian\Response;
+use Luntian\UserRepository;
 
 require_admin();
 
-$method = $_SERVER['REQUEST_METHOD'];
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+$pdo = Database::connection();
 
-// ---------------------------------------------------------------------
-// GET: Fetch Payments by Status
-// ---------------------------------------------------------------------
 if ($method === 'GET') {
-    $pdo = Database::connection();
-    $status = $_GET['status'] ?? 'submitted';
+    $status = (string) ($_GET['status'] ?? 'submitted');
+    $allowedStatuses = ['pending', 'submitted', 'approved', 'rejected', 'cancelled'];
+    if (!in_array($status, $allowedStatuses, true)) {
+        Response::error('Invalid payment status filter.', 400);
+    }
 
     $stmt = $pdo->prepare(
         'SELECT p.id, p.reference_code, p.amount_php, p.billing_cycle, p.status,
-                p.gcash_reference, p.proof_path, p.created_at, p.updated_at,
+                p.gcash_reference, p.proof_path, p.admin_note, p.created_at, p.updated_at, p.approved_at,
                 u.email, u.display_name
          FROM payments p
          JOIN users u ON u.id = p.user_id
          WHERE p.status = :status
-         ORDER BY p.updated_at DESC
-         LIMIT 50'
+         ORDER BY p.updated_at DESC, p.id DESC
+         LIMIT 100'
     );
     $stmt->execute(['status' => $status]);
-
     Response::json(['ok' => true, 'payments' => $stmt->fetchAll()]);
-    exit;
 }
 
-// ---------------------------------------------------------------------
-// POST: Process Payment Actions (Approve / Reject)
-// ---------------------------------------------------------------------
 if ($method === 'POST') {
     $body = read_json_body();
-    $paymentId = $body['paymentId'] ?? '';
+    $paymentId = filter_var($body['paymentId'] ?? null, FILTER_VALIDATE_INT);
     $action = $body['action'] ?? '';
 
-    if ($paymentId === '' || !in_array($action, ['approve', 'reject'], true)) {
-        Response::error('paymentId and action (approve|reject) required', 400);
+    if (!$paymentId || $paymentId < 1 || !in_array($action, ['approve', 'reject'], true)) {
+        Response::error('A valid paymentId and action (approve or reject) are required.', 400);
     }
 
-    $pdo = Database::connection();
-
-    // Fetch existing payment
-    $stmt = $pdo->prepare(
-        'SELECT p.*, u.id AS user_id 
-         FROM payments p
-         JOIN users u ON u.id = p.user_id 
-         WHERE p.id = :id'
-    );
-    $stmt->execute(['id' => $paymentId]);
-    $payment = $stmt->fetch();
-
-    if (!$payment) {
-        Response::error('Payment not found', 404);
+    $note = trim((string) ($body['adminNote'] ?? ''));
+    if (mb_strlen($note) > 1000) {
+        Response::error('Rejection note must be 1,000 characters or fewer.', 400);
     }
 
-    // Prevent re-processing finalized payments
-    if ($payment['status'] !== 'submitted') {
-        Response::error('Payment has already been processed', 400);
-    }
+    try {
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare('SELECT * FROM payments WHERE id = :id FOR UPDATE');
+        $stmt->execute(['id' => $paymentId]);
+        $payment = $stmt->fetch();
 
-    // Process Action
-    if ($action === 'approve') {
-        try {
-            $pdo->beginTransaction();
-
-            $pdo->prepare(
-                "UPDATE payments SET status = 'approved', approved_at = NOW(), updated_at = NOW() WHERE id = :id"
-            )->execute(['id' => $paymentId]);
-
-            AuthHelper::activatePro((string) $payment['user_id'], (string) $payment['billing_cycle']);
-
-            $pdo->commit();
-            Response::json(['ok' => true, 'status' => 'approved']);
-            exit;
-        } catch (\Throwable $e) {
+        if (!$payment) {
             $pdo->rollBack();
-            Response::error('Failed to activate subscription: ' . $e->getMessage(), 500);
+            Response::error('Payment not found.', 404);
         }
-    } else { // Reject
-        $note = trim((string) ($body['adminNote'] ?? ''));
+        if ($payment['status'] !== 'submitted') {
+            $pdo->rollBack();
+            Response::error('Only submitted payments can be reviewed.', 409);
+        }
 
-        $pdo->prepare(
-            "UPDATE payments SET status = 'rejected', admin_note = :note, updated_at = NOW() WHERE id = :id"
-        )->execute(['id' => $paymentId, 'note' => $note]);
+        if ($action === 'approve') {
+            $update = $pdo->prepare(
+                "UPDATE payments SET status = 'approved', approved_at = NOW(), updated_at = NOW()
+                 WHERE id = :id AND status = 'submitted'"
+            );
+            $update->execute(['id' => $paymentId]);
+            if ($update->rowCount() !== 1) {
+                throw new \RuntimeException('Payment status changed during review.');
+            }
 
-        Response::json(['ok' => true, 'status' => 'rejected']);
-        exit;
+            UserRepository::activatePro((int) $payment['user_id'], (string) $payment['billing_cycle']);
+        } else {
+            $update = $pdo->prepare(
+                "UPDATE payments SET status = 'rejected', admin_note = :note, updated_at = NOW()
+                 WHERE id = :id AND status = 'submitted'"
+            );
+            $update->execute(['id' => $paymentId, 'note' => ($note !== '' ? $note : null)]);
+            if ($update->rowCount() !== 1) {
+                throw new \RuntimeException('Payment status changed during review.');
+            }
+        }
+
+        $pdo->commit();
+        Response::json(['ok' => true, 'status' => $action === 'approve' ? 'approved' : 'rejected']);
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('Admin payment review failed: ' . $e->getMessage());
+        Response::error('Could not process this payment. Refresh the queue and try again.', 500);
     }
 }
 
+header('Allow: GET, POST, OPTIONS');
 Response::error('Method not allowed', 405);
