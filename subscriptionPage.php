@@ -363,33 +363,7 @@
 </section>
 </div>
 </main>
-<!-- Subscription Removal Confirmation Modal -->
-<div class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4" id="removalModal">
-<div class="modal-overlay absolute inset-0" onclick="toggleModal(false)"></div>
-<div class="glass-card relative w-full max-w-md rounded-3xl border border-outline-variant/30 shadow-2xl p-8 overflow-hidden transform transition-all scale-100">
-<div class="mb-6 text-center">
-<div class="w-16 h-16 bg-error/10 text-error rounded-full flex items-center justify-center mx-auto mb-4">
-<span class="material-symbols-outlined text-4xl">warning</span>
-</div>
-<h3 class="font-headline-md text-on-surface dark:text-inverse-on-surface mb-2">Cancel Subscription?</h3>
-<p class="text-on-surface-variant dark:text-outline-variant">You will lose access to 4K video generation and unlimited analysis at the end of your billing cycle.</p>
-</div>
-<div class="flex flex-col gap-3">
-<button class="w-full py-4 rounded-xl bg-surface-container-high dark:bg-surface-container-highest text-on-surface dark:text-inverse-on-surface font-label-md hover:brightness-95 transition-all" onclick="toggleModal(false)">
-                Keep My Plan
-            </button>
-<button class="w-full py-4 rounded-xl border border-error/30 text-error font-label-md hover:bg-error/5 transition-all" onclick="toggleModal(false)">
-                Yes, Remove Subscription
-            </button>
-</div>
-</div>
-</div>
-<!-- Remove Subscription Action -->
-<div class="mt-4 pt-4 border-t border-outline-variant/20">
-<button class="text-error hover:bg-error/5 px-4 py-2 rounded-lg text-label-md transition-colors w-full text-center" onclick="toggleModal(true)">
-                            Remove Subscription
-                        </button>
-</div>
+<section class="max-w-6xl mx-auto px-container-margin -mt-12 mb-12"><div class="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 dark:bg-white/5 p-5"><h3 class="font-label-md font-bold text-on-surface dark:text-inverse-on-surface mb-1">Manual subscription renewal</h3><p class="text-sm text-on-surface-variant dark:text-outline-variant">Payments do not renew automatically. Pro access ends at the recorded expiry unless a later payment is approved.</p></div></section>
 <!-- Simple Footer -->
 <footer class="py-12 border-t border-outline-variant/10 dark:border-outline/10">
 <div class="max-w-6xl mx-auto px-container-margin flex flex-col md:flex-row justify-between items-center gap-8">
@@ -402,17 +376,6 @@
 </div>
 </footer>
 <script>
-    function toggleModal(show) {
-        const modal = document.getElementById('removalModal');
-        if (show) {
-            modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        } else {
-            modal.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        }
-    }
-
     function updateBilling() {
         const toggle = document.getElementById('billingToggle');
         const container = document.getElementById('pricingContainer');
