@@ -98,11 +98,14 @@ try {
         PaymentProofStorage::delete($storedPath);
     }
     error_log('Payment proof submission failed: ' . $e->getMessage());
+    $storageUnavailable = str_contains($e->getMessage(), 'Configure Supabase private storage')
+        || str_contains($e->getMessage(), 'Private Supabase Storage is not configured')
+        || str_contains($e->getMessage(), 'Private payment storage is temporarily unavailable');
     Response::error(
-        $e instanceof \RuntimeException && str_contains($e->getMessage(), 'Configure Supabase private storage')
-            ? $e->getMessage()
+        $storageUnavailable
+            ? 'Payment proof storage is not configured or is temporarily unavailable.'
             : 'Could not submit the payment proof. Please try again.',
-        $e instanceof \RuntimeException && str_contains($e->getMessage(), 'Configure Supabase private storage') ? 503 : 500
+        $storageUnavailable ? 503 : 500
     );
 }
 
