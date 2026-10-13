@@ -191,7 +191,7 @@
 </label>
 <div class="flex items-center gap-2">
 <span class="font-label-md text-on-surface-variant dark:text-outline-variant" id="yearlyLabel">Yearly</span>
-<span class="bg-tertiary-container text-on-tertiary-container text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Save 20%</span>
+<span id="yearly-savings" class="bg-tertiary-container text-on-tertiary-container text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Annual plan</span>
 </div>
 </div>
 </div>
@@ -244,12 +244,12 @@
 <h2 class="font-headline-lg text-headline-lg mt-4 text-on-surface dark:text-inverse-on-surface">Pro Intelligence</h2>
 <div class="flex flex-col mt-2">
 <div class="flex items-baseline">
-<span class="font-headline-xl text-headline-xl text-primary monthly-only">₱1,499</span>
-<span class="font-headline-xl text-headline-xl text-primary yearly-only">₱14,390</span>
+<span id="monthly-price" class="font-headline-xl text-headline-xl text-primary monthly-only">Loading price…</span>
+<span id="yearly-price" class="font-headline-xl text-headline-xl text-primary yearly-only">Loading price…</span>
 <span class="text-on-surface-variant dark:text-outline-variant ml-2 monthly-only">/mo</span>
 <span class="text-on-surface-variant dark:text-outline-variant ml-2 yearly-only">/year</span>
 </div>
-<p class="text-on-tertiary-fixed-variant text-sm font-medium yearly-only mt-1">Total ₱14,390/year (about ₱1,199.17/month)</p>
+<p id="yearly-monthly-equivalent" class="text-on-tertiary-fixed-variant text-sm font-medium yearly-only mt-1">Annual billing</p>
 </div>
 </div>
 <div class="hidden sm:block p-5 bg-primary/10 rounded-2xl">
@@ -458,4 +458,30 @@
 </script>
 <script src="assets/js/luntian-api.js"></script>
 <script src="assets/js/payment-gcash.js"></script>
+<script>
+(async function loadSubscriptionPricing() {
+  const formatPHP = value => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 2 }).format(value);
+  try {
+    const config = await LuntianAPI.api('/api/payments/config.php');
+    const monthly = Number(config.gcash.monthlyPhp);
+    const yearly = Number(config.gcash.yearlyPhp);
+    if (!Number.isFinite(monthly) || monthly <= 0 || !Number.isFinite(yearly) || yearly <= 0) {
+      throw new Error('Subscription pricing is not configured.');
+    }
+    document.getElementById('monthly-price').textContent = formatPHP(monthly);
+    document.getElementById('yearly-price').textContent = formatPHP(yearly);
+    document.getElementById('yearly-monthly-equivalent').textContent =
+      'Total ' + formatPHP(yearly) + '/year (about ' + formatPHP(yearly / 12) + '/month)';
+    const savings = Math.max(0, Math.round((1 - yearly / (monthly * 12)) * 100));
+    document.getElementById('yearly-savings').textContent = savings > 0 ? 'Save ' + savings + '%' : 'Annual plan';
+  } catch (error) {
+    document.getElementById('monthly-price').textContent = 'Unavailable';
+    document.getElementById('yearly-price').textContent = 'Unavailable';
+    document.getElementById('yearly-monthly-equivalent').textContent = 'Pricing is temporarily unavailable.';
+    document.getElementById('yearly-savings').textContent = 'Pricing unavailable';
+    document.getElementById('btn-gcash-pay').disabled = true;
+    document.getElementById('btn-gcash-pay').title = 'Pricing is temporarily unavailable.';
+  }
+})();
+</script>
 </body></html>
