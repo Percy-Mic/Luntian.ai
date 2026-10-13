@@ -37,8 +37,12 @@ if (!is_finite($amount) || $amount <= 0) {
 $pdo = Database::connection();
 $pdo->beginTransaction();
 try {
-    // Reuse an existing unfinished order for this user and cycle instead of
-    // creating multiple confusing pending orders on repeated clicks.
+    // Serialize order creation per user and billing cycle, including when no row exists yet.
+    $cycleLock = $cycle === 'yearly' ? 2 : 1;
+    $lock = $pdo->prepare('SELECT pg_advisory_xact_lock(:uid, :cycle)');
+    $lock->execute(['uid' => (int) $user['id'], 'cycle' => $cycleLock]);
+
+    // Reuse an existing unfinished order instead of creating duplicate pending orders.
     $existing = $pdo->prepare(
         "SELECT id, reference_code, amount_php, billing_cycle, status, created_at
          FROM payments
