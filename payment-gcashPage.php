@@ -51,8 +51,8 @@
 <p id="payment-status-msg" class="text-sm"></p>
 </form>
 </div>
-<script src="/assets/js/luntian-api.js"></script>
-<script src="/assets/js/payment-gcash.js"></script>
+<script src="assets/js/luntian-api.js"></script>
+<script src="assets/js/payment-gcash.js"></script>
 <script>
 (async function () {
   const params = new URLSearchParams(location.search);
@@ -72,13 +72,32 @@
     if (ref) {
       const st = await LuntianAPI.api('/api/payments/status.php?ref=' + encodeURIComponent(ref));
       const p = st.payment;
-      document.getElementById('payment-details').innerHTML =
-        '<p><strong>Amount:</strong> ₱' + Number(p.amount_php).toLocaleString() + '</p>' +
-        '<p><strong>Plan:</strong> ' + p.billing_cycle + '</p>' +
-        '<p><strong>Status:</strong> <span class="text-secondary">' + p.status + '</span></p>';
+      const details = document.getElementById('payment-details');
+      details.replaceChildren();
+      const amount = document.createElement('p');
+      const amountLabel = document.createElement('strong');
+      amountLabel.textContent = 'Amount: ';
+      amount.append(amountLabel, '₱' + Number(p.amount_php).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+      const plan = document.createElement('p');
+      const planLabel = document.createElement('strong');
+      planLabel.textContent = 'Plan: ';
+      plan.append(planLabel, String(p.billing_cycle || '—'));
+      const status = document.createElement('p');
+      const statusLabel = document.createElement('strong');
+      statusLabel.textContent = 'Status: ';
+      const statusValue = document.createElement('span');
+      statusValue.className = 'text-emerald-300';
+      statusValue.textContent = String(p.status || 'unknown');
+      status.append(statusLabel, statusValue);
+      details.append(amount, plan, status);
     }
   } catch (e) {
-    document.getElementById('payment-details').innerHTML = '<p class="text-error">' + e.message + '</p>';
+    const details = document.getElementById('payment-details');
+    details.replaceChildren();
+    const error = document.createElement('p');
+    error.className = 'text-rose-300';
+    error.textContent = e.message || 'Could not load payment details.';
+    details.append(error);
   }
 })();
 </script>
