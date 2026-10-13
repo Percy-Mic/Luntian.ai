@@ -74,7 +74,11 @@ Add:
 | `FIREBASE_*` | Web app config from Firebase |
 | `FIREBASE_FACEBOOK_APP_ID` | Meta app ID (optional, for reference) |
 | `GCASH_*` | Display name, mobile, PHP prices |
-| `ADMIN_SECRET` | Protects `/api/admin/payments.php` and `/admin/payments.php` |
+| `PAYMENT_STORAGE_DRIVER` | `local` for local persistent storage or `supabase` for private Supabase Storage |
+| `SUPABASE_URL` | Supabase project URL when using remote payment proof storage |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only key for private proof uploads and reads; never expose it in browser code |
+| `SUPABASE_PAYMENT_BUCKET` | Private Storage bucket name; defaults to `payment-proofs` |
+| `ADMIN_SECRET` | Protects payment review and proof-view endpoints |
 
 **Security:** Rotate any API key that was shared in chat or committed by mistake. Use a long, random `ADMIN_SECRET`; do not put it in browser code.
 
@@ -83,11 +87,12 @@ Add:
 ## 4. GCash (manual — no API)
 
 1. Save your QR as: `public/assets/images/gcash-qr.png`
-2. Set `GCASH_ACCOUNT_NAME`, `GCASH_MOBILE`, prices in `.env`
-3. User flow: **Subscription → Pay with GCash → pay → upload proof**
-4. Admin verifies and approves at `/admin/payments.php`.
+2. Set `GCASH_ACCOUNT_NAME`, `GCASH_MOBILE`, and prices in `.env`; the pricing page loads prices from the API.
+3. For local development, set `PAYMENT_STORAGE_DRIVER=local`. For Vercel, create a private Supabase Storage bucket and configure the server-only variables above.
+4. User flow: **Subscription → Pay with GCash → pay → upload proof**.
+5. Admin reviews the proof and approves/rejects at `/admin/payments.php`.
 
-Payment proof files are validated as JPG, PNG, or WebP, with a 5 MB limit, and new uploads are stored outside the web root in `storage/payment-proofs/`. Admins view them through `/api/admin/payment-proof.php`, which requires the admin secret. The repository ignores the storage directory so uploaded receipts are not committed. **Vercel local files are ephemeral and may be read-only**: for production deployment, configure private object storage and update the upload/proof service to use it.
+Payment proof files are validated as JPG, PNG, or WebP, with a 5 MB limit. Local development stores new uploads outside the web root in `storage/payment-proofs/`; admins view them through `/api/admin/payment-proof.php`, which requires the admin secret. The repository ignores local storage so uploaded receipts are not committed. **For Vercel, configure a private Supabase Storage bucket** and set `PAYMENT_STORAGE_DRIVER=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_PAYMENT_BUCKET` in the server environment. Keep the bucket private and never expose the service-role key to the browser. Vercel local files are ephemeral and are not suitable for durable proof storage.
 
 ---
 
