@@ -70,7 +70,7 @@ Add:
 | `APP_URL` | Full site URL, no trailing slash |
 | `DATABASE_URL` | Aiven PostgreSQL URI (`?sslmode=require`) |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) — free tier |
-| `GEMINI_MODEL` | Optional Gemini model name; defaults to `gemini-2.0-flash` |
+| `GEMINI_MODEL` | Optional Gemini model name; defaults to `gemini-3.8-flash` |
 | `FIREBASE_*` | Web app config from Firebase |
 | `FIREBASE_FACEBOOK_APP_ID` | Meta app ID (optional, for reference) |
 | `GCASH_*` | Display name, mobile, PHP prices |
