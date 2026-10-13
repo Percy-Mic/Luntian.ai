@@ -13,8 +13,6 @@ All paid third-party APIs are optional except free tiers: Firebase Spark, Gemini
 - Composer
 - PostgreSQL (Aiven connection string works from local)
 
-### Steps
-
 ```bash
 cd c:\xampp\htdocs\luntianAi
 composer install
@@ -25,12 +23,11 @@ Edit `.env` (see section 3). **Never commit `.env` or API keys to GitHub.**
 
 ### Database
 
-In [Aiven Console](https://console.aiven.io/), create a free PostgreSQL service. Copy the connection URI into `DATABASE_URL`.
+In [Aiven Console](https://console.aiven.io/), create a PostgreSQL service. Copy the connection URI into `DATABASE_URL`.
 
 Run schema:
 
 ```bash
-# If you have psql installed:
 psql "YOUR_DATABASE_URL" -f database/schema.sql
 ```
 
@@ -73,12 +70,13 @@ Add:
 | `APP_URL` | Full site URL, no trailing slash |
 | `DATABASE_URL` | Aiven PostgreSQL URI (`?sslmode=require`) |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) — free tier |
+| `GEMINI_MODEL` | Optional Gemini model name; defaults to `gemini-2.0-flash` |
 | `FIREBASE_*` | Web app config from Firebase |
 | `FIREBASE_FACEBOOK_APP_ID` | Meta app ID (optional, for reference) |
 | `GCASH_*` | Display name, mobile, PHP prices |
-| `ADMIN_SECRET` | You approve payments at `/admin/payments.php` |
+| `ADMIN_SECRET` | Protects `/api/admin/payments.php` and `/admin/payments.php` |
 
-**Security:** Rotate any API key that was shared in chat or committed by mistake.
+**Security:** Rotate any API key that was shared in chat or committed by mistake. Use a long, random `ADMIN_SECRET`; do not put it in browser code.
 
 ---
 
@@ -87,22 +85,32 @@ Add:
 1. Save your QR as: `public/assets/images/gcash-qr.png`
 2. Set `GCASH_ACCOUNT_NAME`, `GCASH_MOBILE`, prices in `.env`
 3. User flow: **Subscription → Pay with GCash → pay → upload proof**
-4. You approve: `https://yoursite.com/admin/payments.php` with `ADMIN_SECRET`
+4. Admin verifies and approves at `/admin/payments.php`.
+
+Payment proof files are validated as JPG, PNG, or WebP, with a 5 MB limit. For production, store proofs in private object storage rather than a public web directory.
 
 ---
 
-## 5. GitHub
+## 5. Chat API and persistence
 
-```bash
-git init
-git add .
-git commit -m "Add Firebase, Gemini, PostgreSQL, and GCash payment backend"
-git branch -M main
-git remote add origin https://github.com/YOUR_USER/luntian-ai.git
-git push -u origin main
-```
+All chat endpoints require a valid Firebase bearer token.
 
-Ensure `.env` is **not** tracked (see `.gitignore`).
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/chat.php` | POST | Generate a Gemini response and persist the user/assistant messages |
+| `/api/chats.php` | GET | List the signed-in user's recent conversations |
+| `/api/chats.php?id=123` | GET | Load one conversation and its messages |
+| `/api/chats.php` | DELETE | Delete one conversation using JSON `{"sessionId":123}` |
+| `/api/health.php` | GET | Check application/database availability |
+| `/api/auth/config.php` | GET | Public Firebase web configuration |
+| `/api/auth/session.php` | POST | Sync a verified Firebase identity |
+| `/api/auth/me.php` | GET | Return the signed-in user's account and plan |
+| `/api/payments/create.php` | POST | Create a pending subscription payment |
+| `/api/payments/submit.php` | POST | Submit GCash reference and proof image |
+| `/api/payments/status.php?ref=...` | GET | Read payment status for the current user |
+| `/api/admin/payments.php` | GET/POST | Admin-only payment review using `X-Admin-Secret` |
+
+Gemini receives the latest 20 stored messages as conversation context. The browser does not store a separate mock conversation history; the database is the source of truth. Each conversation is scoped to its owning user on the server.
 
 ---
 
@@ -111,62 +119,38 @@ Ensure `.env` is **not** tracked (see `.gitignore`).
 PHP on Vercel uses the community `vercel-php` builder (`vercel.json` included).
 
 1. Import GitHub repo at [vercel.com](https://vercel.com)
-2. **Settings → Environment Variables**: add every key from `.env.example`
+2. **Settings → Environment Variables**: add every required key from `.env.example`
 3. Deploy
 
-**Note:** Vercel’s PHP runtime has limits (cold starts, no persistent local disk). Payment proof uploads should use object storage in production; for MVP, proofs are stored under `public/uploads/` (works on XAMPP; on Vercel use [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) later or deploy PHP on [Render](https://render.com) free tier for full filesystem support.
+**Note:** Vercel functions do not provide durable local storage for uploads. Store payment proofs in private object storage in production, or deploy the PHP application to a suitable persistent runtime.
 
-**Alternative (recommended if Vercel PHP is painful):** Deploy the same repo on **Render** “Web Service” with Docker/PHP — free tier supports uploads and long requests.
-
-Set `APP_URL` to your production URL after first deploy.
+Set `APP_URL` to your production URL after deployment. Verify the health endpoint, Firebase login, database connection, Gemini responses, and payment submission in the deployed environment.
 
 ---
 
 ## 7. Aiven PostgreSQL
 
-1. Create service (free trial / smallest plan)
-2. Connection string → `DATABASE_URL`
-3. Run `database/schema.sql`
-4. Allow connections from Vercel (Aiven allows `0.0.0.0/0` for dev; restrict in production)
+1. Create a PostgreSQL service.
+2. Set `DATABASE_URL` to the connection string.
+3. Run `database/schema.sql`.
+4. Restrict inbound connections to the application where possible.
 
 ---
 
-## 8. API endpoints
+## 8. Continuous integration
 
-| Endpoint | Method | Auth |
-|----------|--------|------|
-| `/api/health.php` | GET | No |
-| `/api/auth/config.php` | GET | No |
-| `/api/auth/session.php` | POST `{idToken}` | No |
-| `/api/auth/me.php` | GET | Bearer Firebase token |
-| `/api/chat.php` | POST `{message, sessionId?}` | Bearer |
-| `/api/payments/create.php` | POST `{billingCycle}` | Bearer |
-| `/api/payments/submit.php` | POST multipart | Bearer |
-| `/api/admin/payments.php` | GET/POST | `X-Admin-Secret` header |
+GitHub Actions runs PHP syntax checks for application files on pushes and pull requests. This catches parse errors, but it does not replace integration tests against configured Firebase, PostgreSQL, Gemini, and payment credentials.
 
 ---
 
-## 9. Costs (free-first)
+## 9. Troubleshooting
 
-| Service | Cost |
-|---------|------|
-| Firebase Auth | Spark plan — $0 |
-| Gemini API | Free quota with limits |
-| Aiven | Trial / small free credits |
-| Vercel | Hobby — $0 |
-| GCash | Manual — $0 API fees |
-
-No Stripe, no GCash merchant API required.
-
----
-
-## 10. Troubleshooting
-
-- **401 on chat:** Sign in again; token expires — sign out and sign in.
+- **401 on chat:** Sign in again; Firebase tokens expire and are refreshed by the auth SDK.
 - **Firebase popup blocked:** Allow popups for your domain.
-- **Database false on health:** Check `pdo_pgsql`, `DATABASE_URL`, SSL mode.
-- **Gemini 403:** Enable Generative Language API in Google Cloud linked to your key.
+- **Database false on health:** Check `pdo_pgsql`, `DATABASE_URL`, and SSL mode.
+- **Gemini 429:** The provider quota/rate limit may have been reached; retry later or review your API quota.
 - **Facebook login fails:** Check OAuth redirect URIs and Firebase Facebook App Secret.
+- **History doesn't load:** Confirm the database schema is applied and that the signed-in account has a valid bearer token.
 
 ---
 
