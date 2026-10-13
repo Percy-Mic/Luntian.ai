@@ -19,7 +19,7 @@ final class GeminiClient
             Response::error('Gemini API is not configured on the server.', 503);
         }
 
-        $model = env('GEMINI_MODEL', 'gemini-2.0-flash');
+        $model = env('GEMINI_MODEL', 'gemini-3.5-flash-lite');
         $url = 'https://generativelanguage.googleapis.com/v1beta/models/'
             . rawurlencode($model)
             . ':generateContent?key=' . rawurlencode($apiKey);
