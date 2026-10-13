@@ -87,7 +87,7 @@ Add:
 3. User flow: **Subscription → Pay with GCash → pay → upload proof**
 4. Admin verifies and approves at `/admin/payments.php`.
 
-Payment proof files are validated as JPG, PNG, or WebP, with a 5 MB limit. For production, store proofs in private object storage rather than a public web directory.
+Payment proof files are validated as JPG, PNG, or WebP, with a 5 MB limit, and new uploads are stored outside the web root in `storage/payment-proofs/`. Admins view them through `/api/admin/payment-proof.php`, which requires the admin secret. The repository ignores the storage directory so uploaded receipts are not committed. **Vercel local files are ephemeral and may be read-only**: for production deployment, configure private object storage and update the upload/proof service to use it.
 
 ---
 
@@ -109,6 +109,7 @@ All chat endpoints require a valid Firebase bearer token.
 | `/api/payments/submit.php` | POST | Submit GCash reference and proof image |
 | `/api/payments/status.php?ref=...` | GET | Read payment status for the current user |
 | `/api/admin/payments.php` | GET/POST | Admin-only payment review using `X-Admin-Secret` |
+| `/api/admin/payment-proof.php?id=123` | GET | Streams a payment proof after admin-secret verification |
 
 Gemini receives the latest 20 stored messages as conversation context. The browser does not store a separate mock conversation history; the database is the source of truth. Each conversation is scoped to its owning user on the server.
 
