@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/_init.php';
 
 use Luntian\Database;
+use Luntian\PaymentProofStorage;
 use Luntian\Response;
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
@@ -22,7 +23,6 @@ if (!preg_match('/^LTN-[A-F0-9]{16}$/', $reference)) {
 if ($gcashRef === '' || mb_strlen($gcashRef) > 64 || !preg_match('/^[A-Za-z0-9\- ]+$/', $gcashRef)) {
     Response::error('Enter a valid GCash reference number.', 400);
 }
-
 if (!isset($_FILES['proof']) || !is_array($_FILES['proof']) || ($_FILES['proof']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
     Response::error('Payment screenshot (proof) is required.', 400);
 }
@@ -42,15 +42,10 @@ if ($finfo === false) {
 $mime = finfo_file($finfo, $file['tmp_name']);
 finfo_close($finfo);
 
-$allowed = [
-    'image/jpeg' => 'jpg',
-    'image/png' => 'png',
-    'image/webp' => 'webp',
-];
-if (!is_string($mime) || !isset($allowed[$mime])) {
+$extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+if (!is_string($mime) || !isset($extensions[$mime])) {
     Response::error('Proof must be a valid JPG, PNG, or WebP image.', 400);
 }
-
 $imageInfo = @getimagesize($file['tmp_name']);
 if ($imageInfo === false || !isset($imageInfo['mime']) || $imageInfo['mime'] !== $mime) {
     Response::error('The uploaded file is not a valid image.', 400);
@@ -58,7 +53,7 @@ if ($imageInfo === false || !isset($imageInfo['mime']) || $imageInfo['mime'] !==
 
 $pdo = Database::connection();
 $pdo->beginTransaction();
-$dest = null;
+$storedPath = null;
 
 try {
     $stmt = $pdo->prepare(
@@ -78,20 +73,7 @@ try {
         Response::error('This payment can no longer be updated.', 409);
     }
 
-    $uploadDir = dirname(__DIR__, 2) . '/storage/payment-proofs';
-    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0700, true) && !is_dir($uploadDir)) {
-        throw new \RuntimeException('Could not create private proof storage directory.');
-    }
-    @chmod($uploadDir, 0700);
-
-    $filename = bin2hex(random_bytes(24)) . '.' . $allowed[$mime];
-    $dest = $uploadDir . '/' . $filename;
-    if (!move_uploaded_file($file['tmp_name'], $dest)) {
-        throw new \RuntimeException('Could not move uploaded payment proof.');
-    }
-    @chmod($dest, 0600);
-
-    $relativePath = 'storage/payment-proofs/' . $filename;
+    $storedPath = PaymentProofStorage::store($file['tmp_name'], $mime, $extensions[$mime]);
     $update = $pdo->prepare(
         "UPDATE payments
          SET status = 'submitted', gcash_reference = :gref, proof_path = :path, updated_at = NOW()
@@ -99,21 +81,29 @@ try {
     );
     $update->execute([
         'gref' => $gcashRef,
-        'path' => $relativePath,
+        'path' => $storedPath,
         'id' => (int) $payment['id'],
         'uid' => (int) $user['id'],
     ]);
+    if ($update->rowCount() !== 1) {
+        throw new \RuntimeException('Payment record could not be updated.');
+    }
 
     $pdo->commit();
 } catch (\Throwable $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    if ($dest !== null && is_file($dest)) {
-        @unlink($dest);
+    if ($storedPath !== null) {
+        PaymentProofStorage::delete($storedPath);
     }
     error_log('Payment proof submission failed: ' . $e->getMessage());
-    Response::error('Could not submit the payment proof. Please try again.', 500);
+    Response::error(
+        $e instanceof \RuntimeException && str_contains($e->getMessage(), 'Configure Supabase private storage')
+            ? $e->getMessage()
+            : 'Could not submit the payment proof. Please try again.',
+        $e instanceof \RuntimeException && str_contains($e->getMessage(), 'Configure Supabase private storage') ? 503 : 500
+    );
 }
 
 Response::json([
